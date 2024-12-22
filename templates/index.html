@@ -1,0 +1,144 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🍎 AI Fruit Analytics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #f8f9fa; 
+            font-family: Arial, sans-serif;
+        }
+        .card { 
+            margin: 20px 0; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .card:hover { 
+            transform: translateY(-5px); 
+        }
+        .confidence-bar { 
+            height: 10px; 
+            background: linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%);
+            margin-top: 5px;
+        }
+        .supported-fruits {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .supported-fruits div {
+            margin: 0 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center my-4">🍎 AI Fruit Analytics</h1>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="card-title">📸 Upload Image</h3>
+                        <form id="upload-form" enctype="multipart/form-data">
+                            <input type="file" class="form-control" name="file" accept="image/*" required>
+                            <button type="submit" class="btn btn-primary mt-3 w-100">🔮 Analyze Image</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="supported-fruits">
+                    <div>
+                        <h4>🍎 Apple</h4>
+                        <p>Rich in fiber and antioxidants</p>
+                    </div>
+                    <div>
+                        <h4>🍌 Banana</h4>
+                        <p>High in potassium and energy</p>
+                    </div>
+                    <div>
+                        <h4>🍊 Orange</h4>
+                        <p>Excellent source of Vitamin C</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div id="result-card" class="card" style="display:none;">
+                    <div class="card-body">
+                        <h3 class="card-title">📊 Prediction Results</h3>
+                        <img id="uploaded-image" class="img-fluid mb-3" alt="Uploaded Image">
+                        <div id="prediction-details">
+                            <h4 id="prediction-label" class="text-center"></h4>
+                            <p id="confidence-text" class="text-center"></p>
+                            <p id="description-text" class="text-muted"></p>
+                            
+                            <h5>Detailed Probabilities</h5>
+                            <div id="probabilities-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-3">
+            <a href="/history" class="btn btn-secondary">View Prediction History</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+
+            // Show uploaded image
+            const file = formData.get('file');
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('uploaded-image').src = event.target.result;
+                document.getElementById('result-card').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const predictionLabel = document.getElementById('prediction-label');
+                const confidenceText = document.getElementById('confidence-text');
+                const descriptionText = document.getElementById('description-text');
+                const probabilitiesContainer = document.getElementById('probabilities-container');
+
+                predictionLabel.textContent = `Prediction: ${data.prediction}`;
+                confidenceText.textContent = `Confidence: ${data.confidence.toFixed(1)}%`;
+                descriptionText.textContent = data.description;
+
+                // Clear previous probabilities
+                probabilitiesContainer.innerHTML = '';
+
+                // Display probabilities
+                Object.entries(data.probabilities).forEach(([fruit, prob]) => {
+                    const probabilityItem = document.createElement('div');
+                    probabilityItem.innerHTML = `
+                        <div class="d-flex justify-content-between">
+                            <span>${fruit}</span>
+                            <span>${(prob * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="confidence-bar" style="width: ${prob * 100}%"></div>
+                    `;
+                    probabilitiesContainer.appendChild(probabilityItem);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred during prediction');
+            });
+        });
+    </script>
+</body>
+</html>
